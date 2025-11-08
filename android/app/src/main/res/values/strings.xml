@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NEET-OS</string>
+    <string name="title_activity_main">NEET-OS</string>
+    <string name="package_name">com.neetos.app</string>
+    <string name="custom_url_scheme">com.neetos.app</string>
+</resources>
