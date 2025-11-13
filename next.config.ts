@@ -1,28 +1,28 @@
 /** @type {import('next').NextConfig} */
-export const baseConfig = {
-	reactStrictMode: true,
+const nextConfig = {
+  reactStrictMode: true,
 
-	eslint: {
-		ignoreDuringBuilds: true,
-	},
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 
-	typescript: {
-		ignoreBuildErrors: true,
-	},
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
-	trailingSlash: true,
-	output: "export",
+  trailingSlash: true,
 
-	images: {
-		remotePatterns: [
-			{
-				protocol: "https",
-				hostname: "placehold.co",
-				port: "",
-				pathname: "/**",
-			},
-		],
-		// Allow direct external image URLs (for next/image)
-		unoptimized: true,
-	},
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+        port: "",
+        pathname: "/**",
+      },
+    ],
+    // Allow direct external image URLs (for next/image)
+    unoptimized: true,
+  },
 };
+module.exports = nextConfig;

@@ -5,7 +5,7 @@ import styled from 'styled-components';
 
 const Loading = () => {
   return (
-    <StyledWrapper>
+    <div className='min-h-screen min-w-screen flex items-center justify-center'><StyledWrapper>
       <svg xmlns="http://www.w3.org/2000/svg" height="200px" width="200px" viewBox="0 0 200 200" className="pencil">
         <defs>
           <clipPath id="pencil-eraser">
@@ -37,7 +37,7 @@ const Loading = () => {
           </g>
         </g>
       </svg>
-    </StyledWrapper>
+    </StyledWrapper></div>
   );
 }
 

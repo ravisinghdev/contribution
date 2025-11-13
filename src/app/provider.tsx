@@ -2,6 +2,8 @@
 
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ReactNode, FC } from "react";
+import { AuthProvider } from "@/context/AuthContext";
+import { TransactionsProvider } from "@/context/TransactionsContext";
 
 interface IProviderProps {
   children: ReactNode;
@@ -9,14 +11,16 @@ interface IProviderProps {
 
 const Provider: FC<IProviderProps> = ({ children }) => {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      {children}
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        <TransactionsProvider>{children}</TransactionsProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 };
 

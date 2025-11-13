@@ -1,19 +1,29 @@
-"use client"
+import { createClient } from "@/lib/supabase/server";
+import { DashboardShell } from "@/components/dashboard/layout/DashboardShell";
+import type { Database } from "@/lib/database.types";
 
-import {FC} from "react"
-import { ILayoutProps } from "../layout"
-import { SidebarProvider } from "@/components/dashboard/layout/SidebarContext"
-import Navbar from "@/components/dashboard/layout/Navbar"
-import Sidebar from "@/components/dashboard/layout/Sidebar"
+export type Farewell = Database["public"]["Tables"]["farewells"]["Row"];
 
-const DashboardLayout:FC<ILayoutProps> = ({children}) =>{
-    return(
-         <SidebarProvider>
-          <Navbar />
-          <Sidebar />
-          <main className="pt-14 sm:ml-64 transition-all">{children}</main>
-        </SidebarProvider>
-    )
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {console.log("user not found")}
+
+  return (
+    <DashboardShell
+      userProfile={{
+        full_name: user?.user_metadata.full_name,
+        avatar_url: user?.user_metadata.avatar_url,
+      }}
+      email={user?.email || ""}
+      activeFarewell={null}
+      activeRole={user?.role!}
+      hasNoFarewells={false}
+    >
+      {children}
+    </DashboardShell>
+  );
 }
-
-export default DashboardLayout

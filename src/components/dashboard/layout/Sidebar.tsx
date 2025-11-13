@@ -59,6 +59,7 @@ import { DialogTitle } from "@/components/ui/dialog";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+// Your custom routes, all defined here
 export const navGroups = [
   {
     title: "Overview",
@@ -88,8 +89,8 @@ export const navGroups = [
         icon: PiggyBank,
       },
       {
-        href: "/dashboard/contributions/add",
-        label: "Add Payment",
+        href: "/dashboard/contributions/payment",
+        label: "Make Payment",
         icon: Plus,
       },
       {
@@ -252,7 +253,16 @@ export const navGroups = [
 
 /* ------------------- MAIN SIDEBAR COMPONENT ------------------- */
 
-export default function Sidebar() {
+// Define the props it will receive from the layout
+interface SidebarProps {
+  user: {
+    full_name: string;
+    avatar_url: string | null;
+  };
+}
+
+export default function Sidebar({ user }: SidebarProps) {
+  // <-- Accept props
   const { open, close } = useSidebar();
 
   return (
@@ -263,13 +273,14 @@ export default function Sidebar() {
           <VisuallyHidden>
             <DialogTitle>Mobile Sidebar Navigation</DialogTitle>
           </VisuallyHidden>
-          <SidebarContent mobile onClose={close} />
+          <SidebarContent mobile onClose={close} user={user} />{" "}
+          {/* <-- Pass user down */}
         </SheetContent>
       </Sheet>
 
       {/* Desktop Sidebar */}
       <aside className="hidden sm:flex flex-col w-64 fixed top-14 left-0 h-[calc(100vh-3.5rem)] border-r bg-background z-40">
-        <SidebarContent />
+        <SidebarContent user={user} /> {/* <-- Pass user down */}
       </aside>
     </>
   );
@@ -280,9 +291,11 @@ export default function Sidebar() {
 function SidebarContent({
   mobile,
   onClose,
+  user,
 }: {
   mobile?: boolean;
   onClose?: () => void;
+  user: SidebarProps["user"]; // <-- Define prop type
 }) {
   const [search, setSearch] = useState("");
 
@@ -320,7 +333,8 @@ function SidebarContent({
         })}
       </div>
 
-      <SidebarFooter mobile={mobile} onClose={onClose} />
+      {/* Pass the user prop down to the footer */}
+      <SidebarFooter mobile={mobile} onClose={onClose} user={user} />
     </div>
   );
 }
@@ -337,7 +351,7 @@ function SidebarGroup({
   onClose?: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const pathname = usePathname();
+  const pathname = usePathname(); // <-- This hook gets the current URL
 
   return (
     <div className="px-3 mb-2">
@@ -364,14 +378,16 @@ function SidebarGroup({
             className="mt-1 space-y-1 overflow-hidden"
           >
             {items.map(({ href, label, icon: Icon }) => {
+              // This is where the "active state" is handled
               const active = pathname === href;
               return (
                 <motion.li key={label} layout>
                   <Link
                     href={href}
-                    onClick={() => onClose && onClose()}
+                    onClick={() => onClose && onClose()} // This handles mobile close on nav
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all duration-200 relative",
+                      // This conditionally applies your active styles
                       active
                         ? "bg-primary/10 text-primary font-medium border-l-4 border-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -395,11 +411,20 @@ function SidebarGroup({
 function SidebarFooter({
   mobile,
   onClose,
+  user,
 }: {
   mobile?: boolean;
   onClose?: () => void;
+  user: SidebarProps["user"]; // <-- Define prop type
 }) {
   const { theme, setTheme } = useTheme();
+
+  // Get initials for avatar fallback
+  const initials = user.full_name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <div className="border-t px-4 py-3 bg-background/80 backdrop-blur-sm">
@@ -407,12 +432,17 @@ function SidebarFooter({
       <div className="flex items-center gap-3 mb-3">
         <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-purple-400/30 ring-1 ring-border overflow-hidden">
           <Avatar className="h-8 w-8 cursor-pointer ring-1 ring-muted/50 hover:ring-primary transition-all">
-            <AvatarImage src="https://cdn.flyonui.com/fy-assets/avatar/avatar-1.png" />
-            <AvatarFallback>JD</AvatarFallback>
+            <AvatarImage
+              src={user.avatar_url || undefined}
+              alt={user.full_name}
+            />
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </div>
         <div className="flex flex-col">
-          <p className="text-sm font-medium leading-tight">John Doe</p>
+          {/* Use the real user data passed as a prop */}
+          <p className="text-sm font-medium leading-tight">{user.full_name}</p>
+          {/* We will fetch/pass the role later */}
           <p className="text-xs text-muted-foreground">Organizer</p>
         </div>
         {mobile && (
@@ -441,7 +471,7 @@ function SidebarFooter({
           Switch Theme
         </button>
         <Link
-          href="/dashboard/profile"
+          href="/dashboard/profile" // <-- Example link
           className="text-[11px] text-primary hover:underline"
         >
           View Profile

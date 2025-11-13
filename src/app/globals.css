@@ -75,9 +75,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-   --farewell-bg-url: url("/images/farewell-bg.jpg");
-  --farewell-bg-overlay: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.18));
-
+  --farewell-bg-url: url("/images/farewell-bg.jpg");
+  --farewell-bg-overlay: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(0, 0, 0, 0.18)
+  );
 }
 
 .dark {
@@ -150,8 +153,16 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at top right, rgba(255, 182, 193, 0.08), transparent 60%),
-              radial-gradient(circle at bottom left, rgba(147, 112, 219, 0.08), transparent 70%);
+  background: radial-gradient(
+      circle at top right,
+      rgba(255, 182, 193, 0.08),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(147, 112, 219, 0.08),
+      transparent 70%
+    );
   pointer-events: none;
   z-index: 0;
   animation: bgPulse 12s ease-in-out infinite alternate;

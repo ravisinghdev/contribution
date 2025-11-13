@@ -1,76 +1,189 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Menu, Search } from "lucide-react";
+import { Menu, Search, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "./SidebarContext";
 import NotificationDropdown from "./NotificationDropdown";
 import ProfileDropdown from "./ProfileDropdown";
 import { motion, AnimatePresence } from "framer-motion";
-import ExpDropdown from "./ExpDropdown";
 import { ThemeToggler } from "@/components/theme/ThemeToggler";
 import SearchBar from "./SearchBar";
+import { createClient } from "@/lib/supabase/client";
+import useSWR from "swr";
+import toast from "react-hot-toast";
+import { cookies } from "next/headers";
 
-export default function Navbar() {
+interface NavbarProps {
+  user: {
+    full_name: string;
+    avatar_url: string | null;
+  };
+  email: string;
+}
+
+export interface Farewell {
+  id: number;
+  name: string;
+  event_year: number;
+  organizing_class: string | null;
+  created_at: string;
+}
+
+// --- Supabase Fetcher ---
+const fetchFarewells = async (): Promise<Farewell[]> => {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("farewells")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data || [];
+};
+
+export default function Navbar({ user, email }: NavbarProps) {
   const { toggle } = useSidebar();
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [activeFarewell, setActiveFarewell] = useState<Farewell | null>(null);
+  const [farewellsCache, setFarewellsCache] = useState<Farewell[]>([]);
 
-  // simple mount guard for any client-only libs
-  useEffect(() => setMounted(true), []);
+  // Load cached farewells from localStorage
+  useEffect(() => {
+    setMounted(true);
+    const cached = localStorage.getItem("farewells-cache");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Date.now() - parsed.timestamp < 10 * 60 * 1000) {
+        setFarewellsCache(parsed.data);
+      } else localStorage.removeItem("farewells-cache");
+    }
+
+    const savedActiveId = localStorage.getItem("active_farewell_id");
+    if (savedActiveId && parsedFarewells(parsedFarewells)?.length) {
+      const found = parsedFarewells(parsedFarewells).find(
+        (f) => f.id === Number(savedActiveId)
+      );
+      if (found) setActiveFarewell(found);
+    }
+  }, []);
+
+  const parsedFarewells = (f: any) => (Array.isArray(f) ? f : []);
+
+  // SWR for real-time updates + revalidation
+  const { data, isValidating } = useSWR("farewells", fetchFarewells, {
+    fallbackData: farewellsCache.length ? farewellsCache : undefined,
+    revalidateOnFocus: true,
+    dedupingInterval: 10 * 60 * 1000,
+  });
+
+  const farewells = data || farewellsCache;
+
+  // Persist cache on updates
+  useEffect(() => {
+    if (farewells && farewells.length) {
+      localStorage.setItem(
+        "farewells-cache",
+        JSON.stringify({ data: farewells, timestamp: Date.now() })
+      );
+    }
+  }, [farewells]);
+
+  // Save active farewell in localStorage
+  const handleFarewellSelect = (farewell: Farewell) => {
+    setActiveFarewell(farewell);
+    localStorage.setItem("active_farewell_id", farewell.id.toString());
+  };
+
+  const isLoading = !farewells || (isValidating && farewells.length === 0);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      <nav className="h-14 flex items-center justify-between px-4 sm:px-6 bg-background/95 backdrop-blur border-b">
-        {/* left: menu + brand */}
+      <nav className="h-14 flex items-center justify-between px-4 sm:px-6 border-b bg-background/95 backdrop-blur-sm">
+        {/* Left section */}
         <div className="flex items-center gap-3">
-          {/* mobile hamburger */}
-          <button
-            className="sm:hidden p-2 rounded-md hover:bg-muted transition-colors"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="sm:hidden"
             onClick={toggle}
-            aria-label="Toggle sidebar"
           >
             <Menu className="h-5 w-5" />
-          </button>
+          </Button>
 
-          <Link
-            href="/"
-            className="font-bold text-lg sm:text-xl bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-tight hover:opacity-90 transition-opacity"
-          >
-            NEET&nbsp;OS
-          </Link>
+          {/* Farewell switcher */}
+          {isLoading ? (
+            <Skeleton className="h-8 w-40 rounded-md" />
+          ) : farewells.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 font-medium"
+                >
+                  {activeFarewell?.name || farewells[0].name}
+                  <ChevronDown className="h-4 w-4 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                {farewells.map((f) => (
+                  <DropdownMenuItem
+                    key={f.id}
+                    onClick={() => handleFarewellSelect(f)}
+                    className={`cursor-pointer ${
+                      activeFarewell?.id === f.id
+                        ? "bg-muted text-foreground"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{f.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {f.event_year} • {f.organizing_class ?? "General"}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="text-sm text-muted-foreground">
+              No farewells found
+            </span>
+          )}
 
-          {/* desktop inline search */}
-          <div className="hidden md:flex items-center ml-6 relative w-72">
+          {/* Desktop Search */}
+          <div className="hidden md:block ml-4 w-72">
             <SearchBar />
           </div>
         </div>
 
-        {/* right: actions */}
+        {/* Right section */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* small inline gamified items (hide on very small screens) */}
-          <div className="hidden sm:flex items-center gap-3">
-            <ExpDropdown />
-            <ThemeToggler />
-          </div>
-
-          {/* mobile search toggle */}
-          <button
-            className="md:hidden p-2 rounded-md hover:bg-muted transition-colors"
+          <ThemeToggler />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
             onClick={() => setMobileSearchOpen((s) => !s)}
-            aria-label="Open search"
           >
             <Search className="h-5 w-5" />
-          </button>
-
-          {/* Notification & Profile components */}
+          </Button>
           <NotificationDropdown />
-          <ProfileDropdown />
+          <ProfileDropdown user={user} email={email} />
         </div>
       </nav>
 
-      {/* mobile search dropdown */}
+      {/* Mobile Search */}
       <AnimatePresence>
         {mobileSearchOpen && (
           <motion.div
@@ -82,11 +195,7 @@ export default function Navbar() {
           >
             <div className="flex items-center gap-2">
               <Search className="h-5 w-5 text-muted-foreground" />
-              <Input
-                aria-label="Mobile search"
-                placeholder="Search topics, questions..."
-                className="h-9"
-              />
+              <Input placeholder="Search memories, people..." className="h-9" />
             </div>
           </motion.div>
         )}

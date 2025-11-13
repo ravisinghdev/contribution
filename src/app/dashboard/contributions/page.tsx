@@ -1,23 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import {
-  Plus,
-  Trash2,
-  Pencil,
-  Search,
-  Filter,
-  Receipt,
-  Wallet,
-  Coins,
-  Users,
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -26,275 +12,202 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
+import { dummyTransactions } from "@/data/dummyTransactions";
+import { DownloadCloud } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-export default function ContributePage() {
+export default function ContributionsDashboard() {
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"assigned" | "paid">("assigned");
+  const [filterMethod, setFilterMethod] = useState<
+    "all" | "online" | "offline"
+  >("all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "pending" | "completed" | "failed"
+  >("all");
 
-  const [data, setData] = useState([
-    { id: 1, name: "John Doe", assigned: 1000, paid: 400, status: "Partial" },
-    { id: 2, name: "Ava Sharma", assigned: 1400, paid: 400, status: "Paid" },
-    { id: 3, name: "Ravi Kumar", assigned: 1600, paid: 300, status: "Pending" },
-    { id: 4, name: "Neha Singh", assigned: 1500, paid: 500, status: "Paid" },
-  ]);
+  const filteredTransactions = useMemo(() => {
+    return dummyTransactions.filter((t) => {
+      const matchesSearch = t.user_name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      const matchesMethod = filterMethod === "all" || t.method === filterMethod;
+      const matchesStatus = filterStatus === "all" || t.status === filterStatus;
+      return matchesSearch && matchesMethod && matchesStatus;
+    });
+  }, [search, filterMethod, filterStatus]);
 
-  // 🧠 Derived values update automatically when data changes
-  const totalAssigned = useMemo(
-    () => data.reduce((a, b) => a + b.assigned, 0),
-    [data]
+  const totalContributions = filteredTransactions.reduce(
+    (a, t) => a + t.total_amount,
+    0
   );
-  const totalPaid = useMemo(() => data.reduce((a, b) => a + b.paid, 0), [data]);
-  const totalRemaining = totalAssigned - totalPaid;
-  const contributors = data.length;
-
-  const filteredData = useMemo(() => {
-    return data
-      .filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => b[sortBy] - a[sortBy]);
-  }, [search, sortBy, data]);
-
-  // 🪄 Update assigned or paid dynamically
-  const handleUpdate = (
-    id: number,
-    field: "assigned" | "paid",
-    value: number
-  ) => {
-    setData((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              [field]: value,
-              status:
-                value === item.assigned
-                  ? "Paid"
-                  : value > 0
-                  ? "Partial"
-                  : "Pending",
-            }
-          : item
-      )
-    );
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/60 text-foreground p-6 space-y-10">
-      {/* Header */}
-      <motion.div
-        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div>
-          <h1 className="text-3xl font-bold">💰 Contributions Overview</h1>
-          <p className="text-muted-foreground">
-            Manage, update, and monitor all contribution records.
-          </p>
-        </div>
-        <Button
-          className="flex items-center gap-2"
-          onClick={() => {
-            const newId = data.length + 1;
-            setData([
-              ...data,
-              {
-                id: newId,
-                name: `User ${newId}`,
-                assigned: 0,
-                paid: 0,
-                status: "Pending",
-              },
-            ]);
-          }}
-        >
-          <Plus className="w-4 h-4" /> Add Contribution
-        </Button>
-      </motion.div>
+    <motion.div className="space-y-6 p-4 max-w-7xl mx-auto">
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <Card className="shadow-lg rounded-2xl">
+          <CardHeader>
+            <CardTitle>Total Contributions</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">
+            ${totalContributions.toFixed(2)}
+          </CardContent>
+        </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          {
-            title: "Total Assigned",
-            value: `₹${totalAssigned}`,
-            icon: Wallet,
-            color: "from-blue-500/20 to-blue-700/20",
-          },
-          {
-            title: "Total Paid",
-            value: `₹${totalPaid}`,
-            icon: Coins,
-            color: "from-green-500/20 to-green-700/20",
-          },
-          {
-            title: "Remaining",
-            value: `₹${totalRemaining}`,
-            icon: Receipt,
-            color: "from-red-500/20 to-red-700/20",
-          },
-          {
-            title: "Contributors",
-            value: contributors,
-            icon: Users,
-            color: "from-purple-500/20 to-purple-700/20",
-          },
-        ].map((item, i) => (
-          <motion.div key={i} whileHover={{ scale: 1.03 }}>
-            <Card
-              className={cn(
-                "bg-gradient-to-br",
-                item.color,
-                "backdrop-blur-md border-border/40 hover:shadow-lg transition-all"
-              )}
-            >
-              <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle className="text-base text-muted-foreground">
-                  {item.title}
-                </CardTitle>
-                <item.icon className="w-5 h-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{item.value}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+        <Card className="shadow-lg rounded-2xl">
+          <CardHeader>
+            <CardTitle>Online Contributions</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xl font-semibold">
+            $
+            {filteredTransactions
+              .filter((t) => t.method === "online")
+              .reduce((a, t) => a + t.total_amount, 0)
+              .toFixed(2)}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg rounded-2xl">
+          <CardHeader>
+            <CardTitle>Offline Contributions</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xl font-semibold">
+            $
+            {filteredTransactions
+              .filter((t) => t.method === "offline")
+              .reduce((a, t) => a + t.total_amount, 0)
+              .toFixed(2)}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg rounded-2xl">
+          <CardHeader>
+            <CardTitle>Pending Payments</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xl font-semibold">
+            {filteredTransactions.filter((t) => t.status === "pending").length}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Search and Sort */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-6">
-        <div className="relative w-full sm:w-1/3">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search contributor..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
-          />
-        </div>
+      {/* Filters & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <Input
+          placeholder="Search by contributor..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-md"
+        />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant={sortBy === "assigned" ? "default" : "secondary"}
-            onClick={() => setSortBy("assigned")}
+        <div className="flex gap-2">
+          {/* Method Filter */}
+          <Select
+            value={filterMethod}
+            onValueChange={(value) =>
+              setFilterMethod(value as "all" | "online" | "offline")
+            }
           >
-            Assigned
-          </Button>
-          <Button
-            variant={sortBy === "paid" ? "default" : "secondary"}
-            onClick={() => setSortBy("paid")}
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="All Methods" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Methods</SelectItem>
+              <SelectItem value="online">Online</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Status Filter */}
+          <Select
+            value={filterStatus}
+            onValueChange={(value) =>
+              setFilterStatus(
+                value as "all" | "pending" | "completed" | "failed"
+              )
+            }
           >
-            Paid
-          </Button>
-          <Button variant="outline" className="flex items-center gap-1">
-            <Filter className="w-4 h-4" /> Filter
-          </Button>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* SHADCN TABLE */}
-      <div className="rounded-xl border border-border/40 backdrop-blur-md bg-card/50 mt-6 overflow-x-auto">
-        <Table>
+      {/* Transactions Table */}
+      <div className="overflow-x-auto rounded-lg shadow-lg mt-4">
+        <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
-              <TableHead>#</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Assigned (₹)</TableHead>
-              <TableHead>Paid (₹)</TableHead>
-              <TableHead>Remaining</TableHead>
+              <TableHead>ID</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Method</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>Admin</TableHead>
+              <TableHead>Receipt</TableHead>
+              <TableHead>Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.map((c, i) => {
-              const remaining = c.assigned - c.paid;
-              return (
-                <TableRow key={c.id}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={c.assigned}
-                      onChange={(e) =>
-                        handleUpdate(c.id, "assigned", Number(e.target.value))
-                      }
-                      className="w-24"
-                    />
-                  </TableCell>
-
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={c.paid}
-                      onChange={(e) =>
-                        handleUpdate(c.id, "paid", Number(e.target.value))
-                      }
-                      className="w-24"
-                    />
-                  </TableCell>
-
-                  <TableCell>₹{remaining}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        c.status === "Paid"
-                          ? "default"
-                          : c.status === "Partial"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {c.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="flex items-center gap-2">
-                    <Button variant="outline" size="icon">
-                      <Pencil className="w-4 h-4" />
+            {filteredTransactions.map((tx) => (
+              <TableRow key={tx.id} className="transition-colors">
+                <TableCell>{tx.id}</TableCell>
+                <TableCell>{tx.user_name}</TableCell>
+                <TableCell>${tx.total_amount.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Badge variant={tx.method === "online" ? "green" : "yellow"}>
+                    {tx.method.toUpperCase()}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      tx.status === "completed"
+                        ? "green"
+                        : tx.status === "pending"
+                        ? "yellow"
+                        : "red"
+                    }
+                  >
+                    {tx.status.toUpperCase()}
+                  </Badge>
+                </TableCell>
+                <TableCell>{tx.logged_by_admin ?? "-"}</TableCell>
+                <TableCell>
+                  {tx.receipt_url ? (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={tx.receipt_url} target="_blank" rel="noreferrer">
+                        View
+                      </a>
                     </Button>
-                    <Button variant="outline" size="icon">
-                      <Receipt className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() =>
-                        setData((prev) =>
-                          prev.filter((item) => item.id !== c.id)
-                        )
-                      }
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
+                <TableCell>
+                  {new Date(tx.created_at).toLocaleString()}
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>
-
-      {/* Overall Progress */}
-      <Card className="mt-10 bg-card/60 backdrop-blur-lg border-border/40">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">
-            📊 Overall Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Progress value={(totalPaid / totalAssigned) * 100} />
-            <p className="text-sm text-muted-foreground">
-              {((totalPaid / totalAssigned) * 100).toFixed(1)}% of total
-              contributions completed
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </motion.div>
   );
 }
