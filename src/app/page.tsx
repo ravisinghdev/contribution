@@ -1,104 +1,129 @@
-const App = () => {
-  const dashboardicon = (
-    <svg
-      className="w-6 h-6"
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5Zm16 14a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2ZM4 13a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Zm16-2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6Z"
-      />
-    </svg>
-  );
+"use client";
 
-  const overviewicon = (
-    <svg
-      className="w-6 h-6"
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="2"
-        d="M7.111 20A3.111 3.111 0 0 1 4 16.889v-12C4 4.398 4.398 4 4.889 4h4.444a.89.89 0 0 1 .89.889v12A3.111 3.111 0 0 1 7.11 20Zm0 0h12a.889.889 0 0 0 .889-.889v-4.444a.889.889 0 0 0-.889-.89h-4.389a.889.889 0 0 0-.62.253l-3.767 3.665a.933.933 0 0 0-.146.185c-.868 1.433-1.581 1.858-3.078 2.12Zm0-3.556h.009m7.933-10.927 3.143 3.143a.889.889 0 0 1 0 1.257l-7.974 7.974v-8.8l3.574-3.574a.889.889 0 0 1 1.257 0Z"
-      />
-    </svg>
-  );
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Trophy, PiggyBank, LineChart, FolderClock } from "lucide-react";
+import { motion } from "framer-motion";
 
-  const chaticon = (
-    <svg
-      className="w-6 h-6"
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M7 9h5m3 0h2M7 12h2m3 0h5M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-6.616a1 1 0 0 0-.67.257l-2.88 2.592A.5.5 0 0 1 8 18.477V17a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-      />
-    </svg>
-  );
-
-  const sidebarLinks = [
-    { name: "Dashboard", path: "/", icon: dashboardicon },
-    { name: "Overview", path: "/overview", icon: overviewicon },
-    { name: "Chat", path: "/chat", icon: chaticon },
+export default function LandingPage() {
+  const features = [
+    {
+      title: "Make Payment",
+      description: "Contribute easily using online/offline payment options.",
+      icon: PiggyBank,
+    },
+    {
+      title: "Payment History",
+      description: "Track all your contributions in one place.",
+      icon: FolderClock,
+    },
+    {
+      title: "Analytics & Insights",
+      description:
+        "Visualize total contributions, top contributors, and trends.",
+      icon: LineChart,
+    },
+    {
+      title: "Top Contributors",
+      description: "See who is leading in contributions for the farewell.",
+      icon: Trophy,
+    },
   ];
 
   return (
-    <>
-      <div className="flex items-center justify-between px-4 md:px-8 border-b border-gray-300 py-3 bg-white transition-all duration-300">
-        <a href="https://prebuiltui.com">
-          <img
-            className="h-9"
-            src="https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/dummyLogo/dummyLogoColored.svg"
-            alt="dummyLogoColored"
-          />
-        </a>
-        <div className="flex items-center gap-5 text-gray-500">
-          <p>Hi! Admin</p>
-          <button className="border rounded-full text-sm px-4 py-1">
-            Logout
-          </button>
+    <motion.div
+      className="max-w-7xl mx-auto px-6 py-12 space-y-20"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1 }}
+    >
+      {/* Hero Section */}
+      <section className="text-center space-y-6">
+        <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-800">
+          KV School Class 12 Contributions
+        </h1>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          Join your classmates in making the farewell event memorable. Track
+          contributions, participate in fundraising, and celebrate together!
+        </p>
+        <div className="flex justify-center gap-4 mt-4 flex-wrap">
+          <Button size="lg" className="px-8">
+            Contribute Now
+          </Button>
+          <Button size="lg" variant="outline" className="px-8">
+            Learn More
+          </Button>
         </div>
-      </div>
-      <div className="md:w-64 w-16 border-r h-[550px] text-base border-gray-300 pt-4 flex flex-col transition-all duration-300">
-        {sidebarLinks.map((item, index) => (
-          <a
-            href={item.path}
-            key={index}
-            className={`flex items-center py-3 px-4 gap-3 
-                            ${
-                              index === 0
-                                ? "border-r-4 md:border-r-[6px] bg-indigo-500/10 border-indigo-500 text-indigo-500"
-                                : "hover:bg-gray-100/90 border-white text-gray-700"
-                            }`}
-          >
-            {item.icon}
-            <p className="md:block hidden text-center">{item.name}</p>
-          </a>
-        ))}
-      </div>
-    </>
-  );
-};
+      </section>
 
-export default App;
+      {/* Features Section */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {features.map((feature, idx) => (
+          <Card
+            key={idx}
+            className="shadow-lg rounded-3xl hover:shadow-2xl transition-all duration-300 border border-gray-200"
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3 text-gray-800">
+                <feature.icon className="h-6 w-6 text-indigo-500" />
+                {feature.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">{feature.description}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      {/* Stats Section */}
+      <section className="space-y-6 text-center">
+        <h2 className="text-3xl font-bold text-gray-800">Our Impact</h2>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Over 100+ students have contributed so far. Together, we can make the
+          farewell unforgettable.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8">
+          <Card className="shadow-lg rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 border border-gray-200">
+            <h3 className="text-4xl font-bold text-indigo-500">120+</h3>
+            <p className="text-gray-600 mt-2">Contributors</p>
+          </Card>
+          <Card className="shadow-lg rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 border border-gray-200">
+            <h3 className="text-4xl font-bold text-indigo-500">$24,300</h3>
+            <p className="text-gray-600 mt-2">Total Contributions</p>
+          </Card>
+          <Card className="shadow-lg rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 border border-gray-200">
+            <h3 className="text-4xl font-bold text-indigo-500">12</h3>
+            <p className="text-gray-600 mt-2">Days to Farewell</p>
+          </Card>
+        </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className="text-center mt-12 space-y-4">
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h2 className="text-3xl font-bold text-gray-800">
+            Ready to Contribute?
+          </h2>
+          <p className="text-gray-600 max-w-xl mx-auto">
+            Make your contribution today and help make our farewell celebration
+            memorable!
+          </p>
+          <div className="flex justify-center gap-4 flex-wrap mt-4">
+            <Button size="lg" className="px-8">
+              Contribute Now
+            </Button>
+            <Button size="lg" variant="outline" className="px-8">
+              Explore Features
+            </Button>
+          </div>
+        </motion.div>
+      </section>
+    </motion.div>
+  );
+}
