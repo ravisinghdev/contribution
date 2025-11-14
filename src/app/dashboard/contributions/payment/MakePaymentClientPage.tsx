@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import Script from "next/script";
+import toast from "react-hot-toast";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -13,343 +14,212 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface User {
-  id: string;
-  name: string;
-  role: "student" | "main_admin" | "parallel_admin";
-}
-
-interface Transaction {
-  id: number;
-  user_id: string;
-  user_name: string;
-  amount: number;
-  type: "online" | "offline";
-  status: "pending" | "completed";
-  receipt_url?: string | null;
-  notes?: string | null;
-  logged_by_admin?: string | null;
-}
-
-interface MakePaymentProps {
-  currentUser: User;
-  users: User[];
-}
-
+/**
+ * Props:
+ * - currentUser: { id, name, role }
+ * - users: Array<{ id, name, role }>
+ * - refreshTransactions: optional callback to refresh parent transaction list
+ */
 export default function MakePaymentClientPage({
   currentUser,
   users,
-}: MakePaymentProps) {
-  const supabase = createClientComponentClient();
-
+  refreshTransactions,
+}: {
+  currentUser: { id: string; name: string; role: string };
+  users: Array<{ id: string; name: string; role: string }>;
+  refreshTransactions?: () => void;
+}) {
   const isAdmin =
     currentUser.role === "main_admin" || currentUser.role === "parallel_admin";
 
-  const [selectedUser, setSelectedUser] = useState<string | null>(
-    isAdmin ? null : currentUser.id
+  const [selectedUser, setSelectedUser] = useState<string>(
+    isAdmin ? "" : currentUser.id
   );
-  const [amount, setAmount] = useState<number>(0);
-  const [notes, setNotes] = useState("");
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
-  const [paymentType, setPaymentType] = useState<"online" | "offline">(
-    "online"
-  );
+  const [amount, setAmount] = useState<number>(0); // rupees
+  const [notes, setNotes] = useState<string>("");
+  const [method, setMethod] = useState<
+    "online" | "offline" | "cash" | "upi" | "other"
+  >("online");
   const [loading, setLoading] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-
-  // Fetch transactions
-  const fetchTransactions = async () => {
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("*, profiles!inner(full_name)")
-      .order("created_at", { ascending: false });
-
-    if (error) console.error(error);
-    else
-      setTransactions(
-        data.map((t: any) => ({
-          id: t.id,
-          user_id: t.user_id,
-          user_name: t.profiles.full_name,
-          amount: t.amount,
-          type: t.type,
-          status: t.status,
-          receipt_url: t.receipt_url,
-          notes: t.notes,
-          logged_by_admin: t.logged_by_admin_id,
-        }))
-      );
-  };
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    if (!isAdmin) setSelectedUser(currentUser.id);
+  }, [currentUser, isAdmin]);
 
-  const handleSubmit = async () => {
-    if (!selectedUser) return alert("Please select a user");
-    if (amount <= 0) return alert("Enter valid amount");
+  // Helper: create razorpay order (expects paisa integer)
+  async function createOrder(amountPaisa: number) {
+    const res = await fetch("/api/razorpay/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: amountPaisa, currency: "INR" }),
+    });
+    return res.json();
+  }
 
+  // Online payment flow
+  async function handleOnlinePay() {
+    if (!selectedUser) return toast.error("Select a user");
+    if (!amount || amount <= 0) return toast.error("Enter a valid amount");
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("transactions").insert([
-        {
-          user_id: selectedUser,
-          amount,
-          type: paymentType,
-          status: isAdmin || paymentType === "online" ? "completed" : "pending",
-          logged_by_admin_id: isAdmin ? currentUser.id : null,
-          receipt_url: paymentType === "online" ? receiptUrl : null,
-          notes,
+      const amountPaisa = Math.round(amount * 100);
+      const order = await createOrder(amountPaisa);
+      if (!order || !order.id)
+        throw new Error(order.error || "Failed to create order");
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.id,
+        name: "Farewell Contribution",
+        prefill: { name: currentUser.name },
+      };
+
+      const rzp = new (window as any).Razorpay({
+        ...options,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch("/api/razorpay/verify-and-capture", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                selected_user: selectedUser,
+                metadata: { amount, notes },
+              }),
+            });
+
+            const data = await verifyRes.json();
+            if (!verifyRes.ok || !data.success) {
+              throw new Error(data.error || "Verification failed");
+            }
+
+            toast.success("Payment verified and saved");
+            refreshTransactions?.();
+          } catch (err: any) {
+            toast.error(err.message || "Verification error");
+          }
         },
-      ]);
+      });
 
-      if (error) throw error;
-
-      alert("Transaction added successfully");
-      setAmount(0);
-      setNotes("");
-      setReceiptUrl("");
-      setSelectedUser(isAdmin ? null : currentUser.id);
-      fetchTransactions();
+      rzp.open();
     } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Failed to add transaction");
+      toast.error(err.message || "Payment failed");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleApproveOffline = async (id: number) => {
-    const { error } = await supabase
-      .from("transactions")
-      .update({ status: "completed", logged_by_admin_id: currentUser.id })
-      .eq("id", id);
-    if (error) alert("Failed to approve");
-    else fetchTransactions();
-  };
-
-  // Compute summary
-  const totalAmount = transactions.reduce((acc, tx) => acc + tx.amount, 0);
-  const completedCount = transactions.filter(
-    (tx) => tx.status === "completed"
-  ).length;
-  const pendingCount = transactions.filter(
-    (tx) => tx.status === "pending"
-  ).length;
+  // Offline/cash/upi flow (creates server-side transaction)
+  async function handleOfflineSave() {
+    if (!selectedUser) return toast.error("Select a user");
+    if (!amount || amount <= 0) return toast.error("Enter a valid amount");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/contributions/offline-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: selectedUser,
+          amount,
+          notes,
+          logged_by_admin_id: isAdmin ? currentUser.id : null,
+          method: method === "offline" ? "offline" : method, // allow cash/upi/other
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.error || "Failed to save offline payment");
+      toast.success("Offline payment saved");
+      refreshTransactions?.();
+    } catch (err: any) {
+      toast.error(err.message || "Offline save failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <motion.div className="p-6 max-w-7xl mx-auto space-y-8">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card className="border-gray-200 shadow-lg rounded-2xl hover:shadow-2xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle>Total Contributions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">${totalAmount.toFixed(2)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-gray-200 shadow-lg rounded-2xl hover:shadow-2xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle>Completed Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{completedCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-gray-200 shadow-lg rounded-2xl hover:shadow-2xl transition-all duration-300">
-          <CardHeader>
-            <CardTitle>Pending Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{pendingCount}</p>
-          </CardContent>
-        </Card>
+    <div className="p-6 rounded-xl border ">
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="beforeInteractive"
+      />
+      {isAdmin && (
+        <div className="mb-4">
+          <Label>Select User</Label>
+          <Select
+            value={selectedUser}
+            onValueChange={(v) => setSelectedUser(v)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select contributor" />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name} ({u.role})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="mb-3">
+        <Label>Amount (INR)</Label>
+        <Input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(Number(e.target.value))}
+          min={0}
+          step="0.01"
+        />
       </div>
 
-      {/* Payment Form */}
-      <Card className="shadow-xl rounded-3xl border border-gray-200">
-        <CardHeader>
-          <CardTitle>Payment Dashboard</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs
-            defaultValue={isAdmin ? "add_transaction" : "online"}
-            className="space-y-6"
+      <div className="mb-3">
+        <Label>Notes</Label>
+        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+
+      <div className="mb-4">
+        <Label>Payment Method</Label>
+        <div className="flex gap-2 items-center mt-2">
+          <select
+            className="p-2 border rounded w-full"
+            value={method}
+            onChange={(e) => setMethod(e.target.value as any)}
           >
-            <TabsList className="grid grid-cols-2 rounded-xl border border-gray-300 bg-transparent">
-              {isAdmin ? (
-                <>
-                  <TabsTrigger value="add_transaction">
-                    Add Transaction
-                  </TabsTrigger>
-                  <TabsTrigger value="make_payment">Make Payment</TabsTrigger>
-                </>
-              ) : (
-                <>
-                  <TabsTrigger value="online">Online Payment</TabsTrigger>
-                  <TabsTrigger value="offline_request">
-                    Offline Request
-                  </TabsTrigger>
-                </>
-              )}
-            </TabsList>
+            <option value="online">Online (Razorpay)</option>
+            <option value="offline">Offline (generic)</option>
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
 
-            <TabsContent
-              value={isAdmin ? "add_transaction" : "online"}
-              className="space-y-4"
-            >
-              {isAdmin && (
-                <>
-                  <Label>Contributor</Label>
-                  <Select
-                    value={selectedUser ?? ""}
-                    onValueChange={setSelectedUser}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Contributor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name} ({u.role})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-              />
-
-              {paymentType === "online" && (
-                <>
-                  <Label>Receipt URL</Label>
-                  <Input
-                    value={receiptUrl ?? ""}
-                    onChange={(e) => setReceiptUrl(e.target.value)}
-                  />
-                </>
-              )}
-
-              <Label>Notes</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-
-              <Button
-                className="mt-4 w-full"
-                onClick={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? "Submitting..." : "Submit"}
-              </Button>
-            </TabsContent>
-
-            {!isAdmin && (
-              <TabsContent value="offline_request" className="space-y-4">
-                <Label>Amount</Label>
-                <Input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
-                />
-                <Label>Reason / Notes</Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Reason for offline request"
-                />
-                <Button
-                  className="mt-4 w-full"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                >
-                  {loading ? "Submitting..." : "Request Offline Payment"}
-                </Button>
-              </TabsContent>
-            )}
-          </Tabs>
-
-          {/* Transaction Table */}
-          <ScrollArea className="mt-8 rounded-lg border">
-            <Table className="min-w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Logged By</TableHead>
-                  {isAdmin && <TableHead>Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((tx) => (
-                  <TableRow
-                    key={tx.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <TableCell>{tx.user_name}</TableCell>
-                    <TableCell>${tx.amount.toFixed(2)}</TableCell>
-                    <TableCell>{tx.type}</TableCell>
-                    <TableCell>
-                      <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                      >
-                        <Badge
-                          variant={
-                            tx.status === "completed" ? "green" : "yellow"
-                          }
-                        >
-                          {tx.status}
-                        </Badge>
-                      </motion.div>
-                    </TableCell>
-                    <TableCell>{tx.notes}</TableCell>
-                    <TableCell>{tx.logged_by_admin || "-"}</TableCell>
-                    {isAdmin && tx.status === "pending" && (
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          onClick={() => handleApproveOffline(tx.id)}
-                        >
-                          Approve
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-    </motion.div>
+      <div className="grid grid-cols-1 gap-3">
+        {method === "online" ? (
+          <Button onClick={handleOnlinePay} disabled={loading}>
+            {loading ? "Processing..." : "Pay Online (Razorpay)"}
+          </Button>
+        ) : (
+          <Button onClick={handleOfflineSave} disabled={loading}>
+            {loading
+              ? "Saving..."
+              : isAdmin
+              ? "Add Offline Payment (Admin)"
+              : "Request Offline Payment"}
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }

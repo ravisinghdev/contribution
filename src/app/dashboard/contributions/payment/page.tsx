@@ -1,5 +1,7 @@
+// src/app/dashboard/contributions/payment/page.tsx
 import MakePaymentClientPage from "./MakePaymentClientPage";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/supabase";
 
 export default async function PaymentPage() {
   const supabase = await createClient();
@@ -9,43 +11,47 @@ export default async function PaymentPage() {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user || userError) {
+  if (userError || !user) {
     return <div className="text-red-500 p-4">User not authenticated</div>;
   }
 
+  // fetch participants for the current farewell (example farewell_id = 1)
   const { data: participants, error: participantsError } = await supabase
     .from("farewell_participants")
-    .select("id, user_id, role, joined_at")
+    .select("user_id, role")
     .eq("farewell_id", 1);
 
-  if (participantsError) return <div>Error fetching participants</div>;
+  if (participantsError) {
+    console.error(participantsError);
+    return <div className="text-red-500 p-4">Error fetching participants</div>;
+  }
 
-  const currentParticipant = participants?.find((p) => p.user_id === user.id);
-  const currentRole = currentParticipant?.role || "student";
+  // fetch profiles for those participants
+  const participantIds = (participants || []).map(
+    (p: any) => p.user_id
+  ) as string[];
 
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, full_name")
-    .in("id", participants?.map((p) => p.user_id) || []);
+    .in("id", participantIds.length ? participantIds : [""]);
+
+  const currentRole =
+    (participants || []).find((p: any) => p.user_id === user.id)?.role ??
+    "student";
 
   const currentUser = {
     id: user.id,
-    name: user.user_metadata?.full_name || user.email,
+    name: (user.user_metadata as any)?.full_name ?? user.email ?? user.id,
     role: currentRole as "student" | "main_admin" | "parallel_admin",
   };
 
   const users =
-    profiles?.map((u) => {
-      const participantRole = participants?.find(
-        (p) => p.user_id === u.id
-      )?.role;
-      return {
-        id: u.id,
-        name: u.full_name || u.id,
-        role: participantRole as "student" | "main_admin" | "parallel_admin",
-      };
-    }) || [];
+    (profiles || []).map((u: any) => ({
+      id: u.id,
+      name: u.full_name ?? u.id,
+      role: (participants || []).find((p: any) => p.user_id === u.id)?.role,
+    })) || [];
 
-  // ✅ Do NOT pass the server-side supabase client
   return <MakePaymentClientPage currentUser={currentUser} users={users} />;
 }

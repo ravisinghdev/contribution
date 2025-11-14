@@ -1,129 +1,182 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, PiggyBank, LineChart, FolderClock } from "lucide-react";
-import { motion } from "framer-motion";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } 
+  from "@/components/ui/dropdown-menu";
 
-export default function LandingPage() {
-  const features = [
-    {
-      title: "Make Payment",
-      description: "Contribute easily using online/offline payment options.",
-      icon: PiggyBank,
-    },
-    {
-      title: "Payment History",
-      description: "Track all your contributions in one place.",
-      icon: FolderClock,
-    },
-    {
-      title: "Analytics & Insights",
-      description:
-        "Visualize total contributions, top contributors, and trends.",
-      icon: LineChart,
-    },
-    {
-      title: "Top Contributors",
-      description: "See who is leading in contributions for the farewell.",
-      icon: Trophy,
-    },
-  ];
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Search, Filter, Calendar, ChevronDown, IndianRupee } from "lucide-react";
+
+// Dummy data (replace later with Supabase)
+const chartData = [
+  { date: "Mon", amount: 4500 },
+  { date: "Tue", amount: 7000 },
+  { date: "Wed", amount: 3200 },
+  { date: "Thu", amount: 8200 },
+  { date: "Fri", amount: 6000 },
+  { date: "Sat", amount: 9000 },
+  { date: "Sun", amount: 7500 },
+];
+
+const recentTransactions = [
+  {
+    id: 1,
+    user: "Aarav Sharma",
+    amount: 500,
+    method: "UPI",
+    status: "success",
+    date: "Nov 13, 9:12 AM",
+  },
+  {
+    id: 2,
+    user: "Bro",
+    amount: 1000,
+    method: "Cash",
+    status: "pending",
+    date: "Nov 13, 8:40 AM",
+  },
+  {
+    id: 3,
+    user: "Priya Singh",
+    amount: 1500,
+    method: "Razorpay",
+    status: "success",
+    date: "Nov 12, 6:15 PM",
+  },
+];
+
+export default function ContributionDashboard() {
+  const [search, setSearch] = useState("");
 
   return (
-    <motion.div
-      className="max-w-7xl mx-auto px-6 py-12 space-y-20"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1 }}
-    >
-      {/* Hero Section */}
-      <section className="text-center space-y-6">
-        <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-800">
-          KV School Class 12 Contributions
-        </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Join your classmates in making the farewell event memorable. Track
-          contributions, participate in fundraising, and celebrate together!
-        </p>
-        <div className="flex justify-center gap-4 mt-4 flex-wrap">
-          <Button size="lg" className="px-8">
-            Contribute Now
-          </Button>
-          <Button size="lg" variant="outline" className="px-8">
-            Learn More
-          </Button>
+    <div className="space-y-8 relative z-10">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-semibold tracking-tight">Contributions Overview</h1>
+
+        <div className="flex gap-3">
+          <Button className="rounded-xl">Add Contribution</Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="rounded-xl flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Filters
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Today</DropdownMenuItem>
+              <DropdownMenuItem>This Week</DropdownMenuItem>
+              <DropdownMenuItem>This Month</DropdownMenuItem>
+              <DropdownMenuItem>This Year</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </section>
+      </div>
 
-      {/* Features Section */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {features.map((feature, idx) => (
-          <Card
-            key={idx}
-            className="shadow-lg rounded-3xl hover:shadow-2xl transition-all duration-300 border border-gray-200"
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-gray-800">
-                <feature.icon className="h-6 w-6 text-indigo-500" />
-                {feature.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">{feature.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="rounded-2xl shadow-md futuristic-bg">
+          <CardHeader>
+            <CardTitle>Total Contributions</CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold flex items-center gap-2">
+            <IndianRupee className="w-6 h-6" /> 78,900
+          </CardContent>
+        </Card>
 
-      {/* Stats Section */}
-      <section className="space-y-6 text-center">
-        <h2 className="text-3xl font-bold text-gray-800">Our Impact</h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Over 100+ students have contributed so far. Together, we can make the
-          farewell unforgettable.
-        </p>
+        <Card className="rounded-2xl shadow-md futuristic-bg">
+          <CardHeader>
+            <CardTitle>Pending Approvals</CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold">12</CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8">
-          <Card className="shadow-lg rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 border border-gray-200">
-            <h3 className="text-4xl font-bold text-indigo-500">120+</h3>
-            <p className="text-gray-600 mt-2">Contributors</p>
-          </Card>
-          <Card className="shadow-lg rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 border border-gray-200">
-            <h3 className="text-4xl font-bold text-indigo-500">$24,300</h3>
-            <p className="text-gray-600 mt-2">Total Contributions</p>
-          </Card>
-          <Card className="shadow-lg rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 border border-gray-200">
-            <h3 className="text-4xl font-bold text-indigo-500">12</h3>
-            <p className="text-gray-600 mt-2">Days to Farewell</p>
-          </Card>
-        </div>
-      </section>
+        <Card className="rounded-2xl shadow-md futuristic-bg">
+          <CardHeader>
+            <CardTitle>Unique Contributors</CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold">48</CardContent>
+        </Card>
+      </div>
 
-      {/* Call to Action */}
-      <section className="text-center mt-12 space-y-4">
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h2 className="text-3xl font-bold text-gray-800">
-            Ready to Contribute?
-          </h2>
-          <p className="text-gray-600 max-w-xl mx-auto">
-            Make your contribution today and help make our farewell celebration
-            memorable!
-          </p>
-          <div className="flex justify-center gap-4 flex-wrap mt-4">
-            <Button size="lg" className="px-8">
-              Contribute Now
-            </Button>
-            <Button size="lg" variant="outline" className="px-8">
-              Explore Features
-            </Button>
+      {/* CHART SECTION */}
+      <Card className="rounded-2xl shadow-xl futuristic-bg">
+        <CardHeader>
+          <CardTitle className="text-xl">Weekly Contribution Trends</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorContribution" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="10%" stopOpacity={0.7} />
+                    <stop offset="95%" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="amount"
+                  strokeWidth={3}
+                  fillOpacity={0.4}
+                  fill="url(#colorContribution)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-        </motion.div>
-      </section>
-    </motion.div>
+        </CardContent>
+      </Card>
+
+      {/* RECENT CONTRIBUTIONS */}
+      <Card className="rounded-2xl shadow-md futuristic-bg">
+        <CardHeader>
+          <CardTitle className="text-xl">Recent Contributions</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="flex justify-end mb-4">
+            <Input
+              placeholder="Search contributor..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-60 rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-3">
+            {recentTransactions
+              .filter((t) => t.user.toLowerCase().includes(search.toLowerCase()))
+              .map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-xl border border-white/10 backdrop-blur"
+                >
+                  <div>
+                    <p className="font-semibold">{tx.user}</p>
+                    <p className="text-sm opacity-70">{tx.date}</p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="font-bold flex items-center justify-end gap-1">
+                      <IndianRupee className="w-4 h-4" /> {tx.amount}
+                    </p>
+                    <p className="text-xs opacity-70">{tx.method}</p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -24,7 +24,10 @@ const Layout: FC<ILayoutProps> = ({ children }) => {
   return (
     <html lang="en" suppressHydrationWarning className={roboto.className}>
       <head>
-        <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="beforeInteractive"
+        ></Script>
       </head>
       <body className="min-w-full min-h-screen">
         <Provider>
@@ -32,6 +35,7 @@ const Layout: FC<ILayoutProps> = ({ children }) => {
           <Toaster />
         </Provider>
       </body>
+      {/* Razorpay checkout script */}
     </html>
   );
 };
